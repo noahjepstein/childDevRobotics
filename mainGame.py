@@ -98,8 +98,19 @@ def balancedPlate():
 		print "need to have all food groups represented on plate!"
 		return False
 
-	for group in currFoodGroupList:
-		print group
+	groupCounts = collections.Counter(currFoodGroupList)
+	if groupCounts['fruit'] not == 2 or groupCounts['fruit'] not == 3:
+		return False
+	elif groupCounts['vegetable'] not == 3: 
+		return False
+	elif groupCounts['protein'] > 2:
+		return False
+	elif groupCounts['dairy'] > 2: 
+		return False
+	elif groupCounts['treat'] > 1: 
+		return False
+	elif groupCounts['grain']  not == 3 and groupCounts['grain'] not == 4:
+		return False
 
 	return True
 
