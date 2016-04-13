@@ -4,6 +4,7 @@ import csv
 import time
 import os
 import RPi.GPIO as GPIO
+import pygame
 from RFID_TM import scanRFIDTag
 from foodObject import FoodItem
 
@@ -22,14 +23,16 @@ from foodObject import FoodItem
 
 RESET_FLAG = False
 CHECK_GAME_FLAG = False
-RESET_INPUT_CHAN = 16
+RESET_INPUT_CHAN = 22
 CHECK_GAME_INPUT_CHAN = 18
-SOL_TRIGGER_OUTPUT = 22
+SOL_TRIGGER_OUTPUT = 32
 READY_LIGHT_OUTPUT_CHAN = 26
 
-most_recent_reset_time = time.clock()
-most_recent_check_time = time.clock()
-TIME_DIFF_MIN = 1.000
+TIME_DIFF_MIN = 10000
+
+resetClock = pygame.time.Clock()
+checkClock = pygame.time.Clock()
+
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
@@ -95,29 +98,30 @@ def balancedPlate():
 		print "need to have all food groups represented on plate!"
 		return False
 
+	for group in currFoodGroupList:
+		print group
+
 	return True
 
 
 def resetCallback(channel):
 
-	global most_recent_reset_time
+	global resetClock
 	
-	timeDiff = time.clock() - most_recent_reset_time
-	
+	timeDiff = resetClock.tick()
 	print timeDiff
+	
 	if timeDiff > TIME_DIFF_MIN: 
 
 		print "Reset detected."
 		os.system("omxplayer -o local /home/pi/foodGame/sounds/new\ game.mp3") 
 		resetPlate()
 
-	most_recent_reset_time = time.clock()
-
 
 def gameCheckCallback(channel): 
 
-	global most_recent_check_time
-	timeDiff = time.clock() - most_recent_check_time
+	global checkClock
+	timeDiff = checkClock.tick()
 	print timeDiff
 	if timeDiff > TIME_DIFF_MIN: 
 
@@ -137,7 +141,6 @@ def gameCheckCallback(channel):
 		# if has one of each healthy food group
 		# trigger gpio pin for solenoid latch
 
-	most_recent_check_time = time.clock()
 
 def triggerSolenoid(): 
 
