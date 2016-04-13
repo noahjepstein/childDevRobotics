@@ -25,18 +25,27 @@ CHECK_GAME_FLAG = False
 RESET_INPUT_CHAN = 16
 CHECK_GAME_INPUT_CHAN = 18
 SOL_TRIGGER_OUTPUT = 22
+READY_LIGHT_OUTPUT_CHAN = 26
+
+most_recent_reset_time = time.clock()
+most_recent_check_time = time.clock()
+TIME_DIFF_MIN = 1.000
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
 GPIO.setup(RESET_INPUT_CHAN, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
 GPIO.setup(CHECK_GAME_INPUT_CHAN, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
 GPIO.setup(SOL_TRIGGER_OUTPUT, GPIO.OUT, initial = GPIO.LOW)
+GPIO.setup(READY_LIGHT_OUTPUT_CHAN, GPIO.OUT, initial = GPIO.LOW)
 
 # data structure initialization
 
 foodList = {}
 currentPlate = {}
 foodGroups = []
+
+#os.system('omxplayer -o local /home/pi/foodGame/sounds/Windows*')
+GPIO.output(READY_LIGHT_OUTPUT_CHAN, True)
 
 # a bunch of funcs for doing random tasks, interrupt handling, etc. 
 
@@ -91,31 +100,44 @@ def balancedPlate():
 
 def resetCallback(channel):
 
-	print "Reset detected."
-	os.system("osxplayer -o local /home/pi/foodGame/sounds/new\ game.mp3") 
-	resetPlate()
-	# make a womp womp sound
-	# not yet implemented
+	global most_recent_reset_time
+	
+	timeDiff = time.clock() - most_recent_reset_time
+	
+	print timeDiff
+	if timeDiff > TIME_DIFF_MIN: 
 
+		print "Reset detected."
+		os.system("omxplayer -o local /home/pi/foodGame/sounds/new\ game.mp3") 
+		resetPlate()
+
+	most_recent_reset_time = time.clock()
 
 
 def gameCheckCallback(channel): 
 
-	print "Checking state of current game: "
+	global most_recent_check_time
+	timeDiff = time.clock() - most_recent_check_time
+	print timeDiff
+	if timeDiff > TIME_DIFF_MIN: 
 
-	if balancedPlate(): 
-		print "success!"
-		triggerSolenoid()
-		os.system("omxplayer -o local /home/pi/foodGame/sounds/cheer.mp3")
-		# make success sound
-		resetPlate()
-	else: 
-		# make buzzer sound
-		os.system("omxplayer -o local /home/pi/foodGame/sounds/buzzer.mp3")
-		return
+		print "Checking state of current game: "
 
-	# if has one of each healthy food group
-	# trigger gpio pin for solenoid latch
+		if balancedPlate(): 
+			print "success!"
+			triggerSolenoid()
+			os.system("omxplayer -o local /home/pi/foodGame/sounds/cheer.mp3")
+			# make success sound
+			resetPlate()
+		else: 
+			# make buzzer sound
+			os.system("omxplayer -o local /home/pi/foodGame/sounds/buzzer.mp3")
+			return
+
+		# if has one of each healthy food group
+		# trigger gpio pin for solenoid latch
+
+	most_recent_check_time = time.clock()
 
 def triggerSolenoid(): 
 
@@ -127,15 +149,16 @@ def triggerSolenoid():
 def resetPlate():
 	print "resetting plate"
 	currentPlate.clear()
+	print "after call to currentPlate"
 
 ######## MAIN GAME CODE #########
-
-GPIO.add_event_detect(RESET_INPUT_CHAN, GPIO.RISING, callback = resetCallback, bouncetime = 500)
-GPIO.add_event_detect(CHECK_GAME_INPUT_CHAN, GPIO.RISING, callback = gameCheckCallback, bouncetime = 500)
 
 foodList = loadFoodList()
 
 while not RESET_FLAG: 
+
+	GPIO.add_event_detect(RESET_INPUT_CHAN, GPIO.RISING, callback = resetCallback, bouncetime = 1000)
+	GPIO.add_event_detect(CHECK_GAME_INPUT_CHAN, GPIO.RISING, callback = gameCheckCallback, bouncetime = 1000)
 
 	newID = scanRFIDTag()
 
@@ -150,9 +173,8 @@ while not RESET_FLAG:
 
 
 	else: 
-		os.system("osxplayer -o local fart.mp3")
+		os.system("omxplayer -o local /home/pi/foodGame/sounds/fart.mp3")
 		print "Food IDN " + newID + "  not recognized!"
-		# play accomanying error sound
 
 	# compare to list of tags to get a relevant food object
 	# add the food object to currentPlate
@@ -167,6 +189,8 @@ while not RESET_FLAG:
 	else: 
 		print "Plate not balanced."
 
+	GPIO.remove_event_detect(RESET_INPUT_CHAN)
+	GPIO.remove_event_detect(CHECK_GAME_INPUT_CHAN)
 	
 print foodList
 print currentPlate

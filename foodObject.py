@@ -15,8 +15,9 @@ class FoodItem:
 		elif soundFile == 'NONE': 
 			self.soundFile = soundFile
 		else:
-			print "Sound file specified must exist and be of .mp3 type."
 			self.soundFile = soundFile
+
+
 
 	def appendToCSV(self, filename): 
 
@@ -60,9 +61,6 @@ class FoodItem:
 			bashstr = "omxplayer -o local " + soundfiledir + self.soundFile
 			os.system(bashstr)
 
-			# for use on osx
-			# p = vlc.MediaPlayer(self.soundFile)
-			# p.play()
 		else: 
 			print "NOT IMPEMENTED"
 
